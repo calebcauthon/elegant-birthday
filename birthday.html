@@ -1,0 +1,255 @@
+<style>
+#birthday-text-container {
+	color: white;
+	font: 36pt verdana white;
+	position: absolute;
+	left: 25%;
+	top: 25%;
+}
+#birthday-text-container div {
+	float: left;
+}
+.yellow { 
+	color: yellow;
+}
+</style>
+<html>
+	<body>
+		<div id='birthday-text-container' style=''></div>
+	</body>
+</html>
+
+<script type="text/javascript">
+
+var fader = function() {
+	return function() {
+		var set_background_color = function(hex_code) {
+			document.body.style.backgroundColor = hex_code;
+		};
+		var fader_function = set_background_color;
+		
+		var current_level = 0;	
+		
+		var reverse = false;	
+		
+		var initial_red = 255;	
+		var final_red = 0;
+		
+		var initial_green = 255;	
+		var final_green = 0;
+		
+		var initial_blue = 255;	
+		var final_blue = 0;
+		
+		var get_hex_value = function() {
+			var memo = {};
+			
+			return function(number_of_steps, i, initial, terminal) {
+				var range = terminal - initial;
+				var inputs = number_of_steps.toString().concat('000', i, initial, terminal);
+				var result = memo[inputs];
+				
+				if (typeof result !== 'string') {
+					if (reverse) {
+						var percentage = i / number_of_steps;
+						result = initial + percentage * range;
+					} else {
+						var percentage = i / number_of_steps;
+						result = terminal - percentage * range;
+					}
+					result = result.toFixed(0);
+					memo[inputs] = result;				
+				}
+				
+				return result;
+			};
+		}();
+		var get_rgb_step = function(number_of_steps, i) {
+			var step_number = number_of_steps - i;			
+			var this_red = get_hex_value(number_of_steps, step_number, initial_red, final_red);
+			var this_green = get_hex_value(number_of_steps, step_number, initial_green, final_green);
+			var this_blue = get_hex_value(number_of_steps, step_number, initial_blue, final_blue);		
+			
+			return 'rgb('+this_red+', '+this_green+', '+this_blue+')';
+		}
+		var calculate_number_of_steps = function() {
+			return total_time_in_seconds * 25;
+		}
+		var calculate_time_between_steps = function() {		
+			var memo = [];
+			
+			return function () {
+				var inputs = total_time_in_seconds.toString().concat('000', calculate_number_of_steps());
+				var result = memo[inputs];
+				if (typeof result !== 'number') {
+					result = total_time_in_seconds * 1000 / ( calculate_number_of_steps() - 1 );	
+					memo[inputs] = result;
+				}
+				
+				return result;
+			};
+		}()
+		
+		var total_time_in_seconds = 1;
+		
+		var callback = function() {};
+		
+		var set_color_and_continue_recursion = function() {		
+			fader_function(get_rgb_step(calculate_number_of_steps(), current_level));
+			current_level++;
+			
+			if (calculate_number_of_steps() > (current_level - 1)) {
+				setTimeout(set_color_and_continue_recursion, calculate_time_between_steps());
+			} else {				
+				callback();
+			}
+		};
+		return {									
+			fade: function() {
+				if(arguments.length == 1 && arguments[0].rgb) {
+					var initial_rgb = arguments[0].rgb;
+					initial_red = initial_rgb.starting_color[0];
+					initial_green = initial_rgb.starting_color[1];
+					initial_blue = initial_rgb.starting_color[2];
+					
+					final_red = initial_rgb.final_color[0];
+					final_green = initial_rgb.final_color[1];
+					final_blue = initial_rgb.final_color[2];															
+				}
+				if (arguments.length == 1 && arguments[0].duration) {
+					total_time_in_seconds = arguments[0].duration;
+				}
+				if (arguments.length == 1 && arguments[0].callback) {
+					callback = arguments[0].callback;				
+				}
+				if (arguments.length == 1 && arguments[0].fader_function) {
+					fader_function = arguments[0].fader_function;				
+				}
+				if (arguments.length == 1 && arguments[0].reverse) {
+					reverse = arguments[0].reverse;				
+				}		
+				return set_color_and_continue_recursion();	
+			}
+		};
+	}();
+};
+var show_text = function() {
+	var Applier = function() {}
+	Applier.prototype.show_text = create_projector();
+	Applier.prototype.show_text.apply(null, arguments);
+	
+}
+var create_projector = function() {
+	var full_text = 'Happy Birthday';
+	var text_container = document.getElementById('birthday-text-container');
+	var text_being_displayed = '';
+	var current_character_position = 0;
+	var callback = function() {};	
+	var starting_color = [255, 255, 255];
+	var final_color = [0, 0, 0];
+	
+	var display_letter = function(letter) {		
+		var letter_element = document.createElement('div');
+		
+		if(letter == ' ') {
+			letter = '&nbsp;'
+		}
+		if(letter == '@') {
+			letter = '<br>xxx'
+		}
+		letter_element.innerHTML = letter;
+				
+		text_container.appendChild(letter_element);
+		
+		var fade_element = function(hex_code) {
+			letter_element.style.color = hex_code;
+		}
+
+		var this_letter_fader = fader();
+		this_letter_fader.fade({
+			rgb: { 
+				starting_color: starting_color,
+				final_color: final_color
+			},
+			duration: 3,
+			fader_function: fade_element
+		});
+	}
+	
+	var display_incremental_text = function() {	
+		if (arguments.length == 1 && arguments[0].callback) {			
+			callback = arguments[0].callback;
+		}
+		
+		if (arguments.length == 1 && arguments[0].text) {			
+			full_text = arguments[0].text;
+		}
+		if (arguments.length == 1 && arguments[0].rgb) {			
+			starting_color = arguments[0].rgb.starting_color;
+			final_color = arguments[0].rgb.final_color;
+		}
+		if (arguments.length == 1 && arguments[0].from && arguments[0].to) {			
+			starting_color = arguments[0].from;
+			final_color = arguments[0].to;
+		}
+		
+		if (arguments.length > 2) {
+			full_text = arguments[0];
+			starting_color = arguments[1];
+			final_color = arguments[2];
+			if (arguments.length == 4) {
+				callback = arguments[3];
+			}
+		}
+		
+		var next_character = full_text.charAt(current_character_position);
+		display_letter(next_character);
+				
+		current_character_position++;
+		if (current_character_position <= (full_text.length - 1)) {
+			setTimeout(display_incremental_text, 100);
+		} else {
+			callback();
+		}
+	};
+
+	return display_incremental_text;
+};
+
+function get_url_parameter(name) {
+	name = name.replace(/[\[]/,"\\\[").replace(/[\]]/,"\\\]");
+	var regexS = "[\\?&]"+name+"=([^&#]*)";
+	var regex = new RegExp( regexS );
+	var results = regex.exec( window.location.href );
+	if( results == null )
+		return '';
+	else
+		return results[1];
+}
+
+var white = [255, 255, 255];
+var black = [0, 0, 0];
+var yellow = [255, 255, 0];
+
+var name = get_url_parameter('name');
+
+var background_fader = fader();
+background_fader.fade({
+	rgb: { 
+		starting_color: white,
+		final_color: black
+	},	
+	duration: 1,
+	callback: function() {
+		show_text('Happy Birthday, ', black, white, function() {
+			show_text(name, black, yellow);			
+		});
+	},
+	fader_function: function(hex_code) {
+		document.body.style.backgroundColor = hex_code;
+	}
+});
+
+
+
+</script>
